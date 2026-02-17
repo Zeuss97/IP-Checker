@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Registro de IPs</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <h1>Registro y monitoreo de IPs</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="alerts">
+          {% for category, message in messages %}
+            <li class="alert {{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <section class="panel">
+      <h2>Registrar IP</h2>
+      <form action="{{ url_for('register') }}" method="post" class="form-grid">
+        <label>
+          Dirección IP
+          <input type="text" name="ip_address" placeholder="192.168.1.10" required>
+        </label>
+        <label>
+          Alias (opcional)
+          <input type="text" name="alias" placeholder="Equipo oficina">
+        </label>
+        <button type="submit">Guardar</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>IPs registradas</h2>
+        <form action="{{ url_for('ping_now') }}" method="post">
+          <button type="submit">Ejecutar ping ahora</button>
+        </form>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>IP</th>
+            <th>Alias</th>
+            <th>Hostname (ping -a)</th>
+            <th>Último estado</th>
+            <th>Último ping</th>
+            <th>Salida</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ip in ips %}
+          <tr>
+            <td>{{ ip.ip_address }}</td>
+            <td>{{ ip.alias or '-' }}</td>
+            <td>{{ ip.hostname or '-' }}</td>
+            <td>{{ ip.last_status or 'Sin ejecutar' }}</td>
+            <td>{{ ip.last_ping_at or 'Nunca' }}</td>
+            <td><pre>{{ ip.last_output or '-' }}</pre></td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="empty">Sin IPs registradas aún</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,134 @@
+:root {
+  color-scheme: light dark;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #111;
+  color: #f5f5f5;
+}
+
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+.panel {
+  background: #1d1d1d;
+  border: 1px solid #343434;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.edit-panel {
+  max-width: 620px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+input,
+select,
+textarea {
+  border-radius: 8px;
+  border: 1px solid #555;
+  padding: 0.6rem 0.7rem;
+  background: #151515;
+  color: #fff;
+}
+
+button,
+.btn-link {
+  width: fit-content;
+  border-radius: 8px;
+  border: none;
+  padding: 0.65rem 0.9rem;
+  background: #4f8cff;
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.btn-link {
+  background: #555;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #2f2f2f;
+  text-align: left;
+  vertical-align: top;
+  padding: 0.65rem;
+}
+
+pre {
+  white-space: pre-wrap;
+  margin: 0;
+  max-width: 300px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-form {
+  margin: 1rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.filter-badge {
+  margin: 0 0 1rem;
+  padding: 0.4rem 0.7rem;
+  background: #243a63;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.alert {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.alert.success {
+  background: #1d4f27;
+}
+
+.alert.error {
+  background: #661f1f;
+}
+
+.empty {
+  text-align: center;
+}
