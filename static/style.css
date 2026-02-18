@@ -210,6 +210,51 @@ body:not(.login-page)::before {
 .card h2 { margin-top: 0; margin-bottom: 12px; }
 .card-title-row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
 
+.collapsible-card > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.collapsible-card > summary::-webkit-details-marker { display: none; }
+.collapsible-card > summary::after { content: "▾"; font-size: 1.1rem; opacity: .8; }
+.collapsible-card:not([open]) > summary { margin-bottom: 0; }
+.collapsible-card:not([open]) > summary::after { content: "▸"; }
+
+.dashboard-controls { margin-bottom: 12px; }
+.dashboard-grid { display: grid; grid-template-columns: 320px 1fr; gap: 12px; align-items: start; }
+
+.chart-wrap {
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.pie-chart {
+    --used: 0;
+    width: 170px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary) calc(var(--used) * 1%), color-mix(in srgb, var(--success) 65%, transparent) 0);
+    position: relative;
+}
+
+.pie-chart::after {
+    content: "";
+    position: absolute;
+    inset: 26%;
+    background: var(--surface);
+    border-radius: 50%;
+    border: 1px solid var(--border);
+}
+
 .form-grid { display:grid; gap:12px; }
 .form-grid.single { grid-template-columns: 1fr; }
 .form-grid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -297,6 +342,7 @@ th { text-transform: uppercase; letter-spacing:.05em; font-size: .86rem; color: 
 @media (max-width: 920px) {
     .form-grid.two, .form-grid.three, .form-grid.four, .form-grid.compact { grid-template-columns: 1fr; }
     .topbar { flex-direction:column; }
+    .dashboard-grid { grid-template-columns: 1fr; }
     .flyout-menu {
         position: static;
         margin: 8px 10px 10px;

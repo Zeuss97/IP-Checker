@@ -7,6 +7,7 @@ const DB_PATH = DB_DIR . '/ips.db';
 const ROLE_ADMIN = 'admin';
 const ROLE_OPERATOR = 'operator';
 const HOST_TYPES = ['NOTEBOOK', 'DESKTOP', 'SERVER', 'IMPRESORA', 'ROUTER', 'OTRO'];
+const DISPLAY_TZ = '-03:00';
 
 session_start();
 
@@ -36,6 +37,22 @@ function db(): PDO
 function now_iso(): string
 {
     return (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format(DateTimeInterface::ATOM);
+}
+
+function format_display_datetime(?string $value): string
+{
+    $raw = trim((string) $value);
+    if ($raw === '') {
+        return '-';
+    }
+
+    try {
+        $date = new DateTimeImmutable($raw);
+        $displayTz = new DateTimeZone(DISPLAY_TZ);
+        return $date->setTimezone($displayTz)->format('d.m.Y H:i:s');
+    } catch (Exception) {
+        return $raw;
+    }
 }
 
 function init_db(): void
@@ -582,6 +599,37 @@ foreach ($rows as &$row) {
 }
 unset($row);
 
+$allIpRows = db()->query('SELECT ip_address FROM ip_registry ORDER BY ip_address')->fetchAll();
+$segmentStatsMap = [];
+foreach ($allIpRows as $ipRow) {
+    $segment = compute_segment($ipRow['ip_address']);
+    if (!isset($segmentStatsMap[$segment])) {
+        $segmentStatsMap[$segment] = ['segment' => $segment, 'used' => 0, 'free' => 254];
+    }
+    $segmentStatsMap[$segment]['used']++;
+}
+foreach ($segmentStatsMap as &$segmentData) {
+    $segmentData['free'] = max(0, 254 - $segmentData['used']);
+}
+unset($segmentData);
+$segmentStats = array_values($segmentStatsMap);
+usort($segmentStats, static fn(array $a, array $b): int => strcmp($a['segment'], $b['segment']));
+
+$dashboardSegment = trim((string) ($_GET['dashboard_segment'] ?? ''));
+if ($dashboardSegment === '' && $segmentStats) {
+    $dashboardSegment = $segmentStats[0]['segment'];
+}
+
+$dashboardData = ['segment' => $dashboardSegment, 'used' => 0, 'free' => 254];
+foreach ($segmentStats as $seg) {
+    if ($seg['segment'] === $dashboardSegment) {
+        $dashboardData = $seg;
+        break;
+    }
+}
+
+$dashboardUsedPct = min(100, max(0, (int) round(($dashboardData['used'] / 254) * 100)));
+
 $detailIp = trim((string) ($_GET['ip'] ?? ''));
 $detail = null;
 $history = [];
@@ -675,8 +723,8 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
     <?php endif; ?>
 
     <?php if ($user['role'] === ROLE_ADMIN): ?>
-    <section class="card">
-        <h2>Registrar IP</h2>
+    <details class="card collapsible-card" open>
+        <summary><h2>Registrar IP</h2></summary>
         <form method="post" class="form-grid three">
             <input type="hidden" name="action" value="add_ip" />
             <label>IP<input type="text" name="ip_address" required></label>
@@ -684,11 +732,11 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
             <label>Ubicación<input type="text" name="location"></label>
             <div class="form-end"><button type="submit" class="btn primary small">Registrar</button></div>
         </form>
-    </section>
+    </details>
     <?php endif; ?>
 
-    <section class="card">
-        <h2>Buscar y filtrar</h2>
+    <details class="card collapsible-card" open>
+        <summary><h2>Buscar y filtrar</h2></summary>
         <form method="get" class="form-grid four">
             <label>Segmento (/24 o solo rango)
                 <input type="text" name="segment" value="<?= h($segmentFilterInput) ?>" placeholder="Ej: 56 o 192.168.56.0/24">
@@ -707,7 +755,52 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
                 <a class="btn ghost small" href="index.php">Limpiar</a>
             </div>
         </form>
-    </section>
+    </details>
+
+    <details class="card collapsible-card" open>
+        <summary><h2>Dashboard por segmento</h2></summary>
+        <form method="get" class="form-grid three dashboard-controls">
+            <label>Segmento
+                <select name="dashboard_segment">
+                    <?php foreach ($segmentStats as $seg): ?>
+                        <option value="<?= h($seg['segment']) ?>" <?= $dashboardData['segment'] === $seg['segment'] ? 'selected' : '' ?>><?= h($seg['segment']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <input type="hidden" name="segment" value="<?= h($segmentFilterInput) ?>">
+            <input type="hidden" name="ip_filter" value="<?= h($ipFilterInput) ?>">
+            <input type="hidden" name="name_filter" value="<?= h($nameFilterInput) ?>">
+            <input type="hidden" name="location_filter" value="<?= h($locationFilterInput) ?>">
+            <div class="form-end"><button type="submit" class="btn small">Ver</button></div>
+        </form>
+        <?php if (!$segmentStats): ?>
+            <div class="muted">No hay datos para mostrar dashboard.</div>
+        <?php else: ?>
+            <div class="dashboard-grid">
+                <div class="chart-wrap">
+                    <div class="pie-chart" style="--used: <?= $dashboardUsedPct ?>;"></div>
+                    <div>
+                        <strong><?= h($dashboardData['segment']) ?></strong>
+                        <div class="muted">Usadas: <?= h((string) $dashboardData['used']) ?> · Libres: <?= h((string) $dashboardData['free']) ?></div>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Segmento</th><th>IPs usadas</th><th>IPs libres</th></tr></thead>
+                        <tbody>
+                        <?php foreach ($segmentStats as $seg): ?>
+                            <tr>
+                                <td><?= h($seg['segment']) ?></td>
+                                <td><?= h((string) $seg['used']) ?></td>
+                                <td><?= h((string) $seg['free']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <?php endif; ?>
+    </details>
 
     <section class="card">
         <div class="card-title-row">
@@ -747,7 +840,7 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
                             </td>
                             <td>
                                 <?= h($row['last_status'] ?: 'SIN DATOS') ?>
-                                <div class="muted"><?= h($row['last_ping_at'] ?: 'Nunca') ?></div>
+                                <div class="muted"><?= h($row['last_ping_at'] ? format_display_datetime($row['last_ping_at']) : 'Nunca') ?></div>
                             </td>
                             <td class="actions-col">
                                 <a class="btn small" href="index.php?action=detail&amp;ip=<?= urlencode($row['ip_address']) ?>">Detalles</a>
@@ -797,7 +890,7 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
                 <tr><th>Ubicación</th><td><?= h($detail['location'] ?: '-') ?></td></tr>
                 <tr><th>Notas</th><td><?= h($detail['notes'] ?: '-') ?></td></tr>
                 <tr><th>Último estado</th><td><?= h($detail['last_status'] ?: '-') ?></td></tr>
-                <tr><th>Último ping</th><td><?= h($detail['last_ping_at'] ?: '-') ?></td></tr>
+                <tr><th>Último ping</th><td><?= h($detail['last_ping_at'] ? format_display_datetime($detail['last_ping_at']) : '-') ?></td></tr>
                 <tr><th>Registrado por</th><td><?= h($detail['created_by'] ?: '-') ?></td></tr>
             </table>
         </section>
@@ -812,7 +905,7 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
                 <?php else: ?>
                     <?php foreach ($history as $log): ?>
                         <tr>
-                            <td><?= h($log['pinged_at']) ?></td>
+                            <td><?= h(format_display_datetime($log['pinged_at'])) ?></td>
                             <td><?= h($log['status']) ?></td>
                             <td><?= h($log['hostname']) ?></td>
                         </tr>
