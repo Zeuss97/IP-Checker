@@ -133,6 +133,40 @@ function validate_ip(string $ip): bool
     return filter_var($ip, FILTER_VALIDATE_IP) !== false;
 }
 
+function verify_legacy_pbkdf2_password(string $password, string $storedHash): bool
+{
+    $parts = explode(':', $storedHash, 2);
+    if (count($parts) !== 2) {
+        return false;
+    }
+
+    [$saltHex, $expectedHex] = $parts;
+    if ($saltHex === '' || $expectedHex === '' || !ctype_xdigit($saltHex) || !ctype_xdigit($expectedHex)) {
+        return false;
+    }
+
+    $salt = hex2bin($saltHex);
+    if ($salt === false) {
+        return false;
+    }
+
+    $computedHex = hash_pbkdf2('sha256', $password, $salt, 200000);
+    return hash_equals(strtolower($expectedHex), strtolower($computedHex));
+}
+
+function verify_password_compat(string $password, string $storedHash): array
+{
+    if (password_verify($password, $storedHash)) {
+        return ['valid' => true, 'upgrade_hash' => password_needs_rehash($storedHash, PASSWORD_DEFAULT)];
+    }
+
+    if (verify_legacy_pbkdf2_password($password, $storedHash)) {
+        return ['valid' => true, 'upgrade_hash' => true];
+    }
+
+    return ['valid' => false, 'upgrade_hash' => false];
+}
+
 function normalize_segment_filter(string $input): ?string
 {
     $raw = trim($input);
@@ -266,7 +300,17 @@ if ($action === 'login') {
     $stmt->execute(['username' => $username]);
     $row = $stmt->fetch();
 
-    if ($row && password_verify($password, $row['password_hash'])) {
+    $auth = $row ? verify_password_compat($password, $row['password_hash']) : ['valid' => false, 'upgrade_hash' => false];
+
+    if ($row && $auth['valid']) {
+        if ($auth['upgrade_hash']) {
+            $update = db()->prepare('UPDATE users SET password_hash = :password_hash WHERE username = :username');
+            $update->execute([
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'username' => $row['username'],
+            ]);
+        }
+
         $_SESSION['username'] = $row['username'];
         flash('Bienvenido, ' . $row['username'] . '.', 'success');
     } else {
