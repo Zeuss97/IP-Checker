@@ -1,77 +1,54 @@
-# Registro de IPs con monitoreo de ping
+# IP Checker (PHP + SQLite)
 
-Aplicación web para:
+Aplicación migrada a **PHP puro** pensada para correr localmente con **XAMPP en Windows**.
 
-- Registrar direcciones IP y monitorear ping cada 30 minutos.
-- Editar datos de cada host (nombre, tipo, ubicación, alias y notas).
-- Consultar historial de intentos de ping de los últimos 7 días por cada IP.
-- Acceso con usuarios y roles (`admin` / `operator`).
-- Gestión interna de usuarios desde un panel admin.
-- Perfil de usuario para actualizar nombre, apellido, userID y foto (URL).
+## Qué incluye
 
-## Requisitos
+- Login básico con usuario demo `admin / admin`.
+- Registro de IPs (solo admin).
+- Ping manual por IP o para todas.
+- Vista principal con columna **Ubicación**.
+- **Subventana de detalle** por IP (`Detalles`) con:
+  - resumen completo arriba,
+  - historial acumulado de ping (últimos 7 días) abajo.
+- Se eliminó en la UI la salida cruda del `ping -a` para que no se amontone.
+- Selector de fondo usando imágenes dentro de la carpeta `wallpaper/`.
+- CSS renovado, más elegante y con **modo nocturno**.
+- Botones de agregar/acciones en tamaño más compacto.
 
-- Python 3.10+
-- Dependencias de `requirements.txt`
+## Estructura
 
-## Instalación
+- `index.php` → backend + renderizado principal.
+- `static/style.css` → estilos (light/dark).
+- `wallpaper/` → coloca aquí tus imágenes (`.jpg`, `.png`, `.webp`, etc.).
+- `data/ips.db` → base de datos SQLite (se crea sola).
+- `data/` → carpeta autocreada al iniciar si no existe.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
+## Ejecutar con XAMPP (Windows)
 
-En **Windows PowerShell**:
+1. Copia la carpeta del proyecto a:
+   - `C:\xampp\htdocs\IP-Checker`
+2. Inicia **Apache** desde el panel de XAMPP.
+3. Abre en el navegador:
+   - `http://localhost/IP-Checker/index.php`
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
+> Nota: para que el ping funcione en Windows, Apache debe poder ejecutar el comando `ping`.
 
-## Ejecución
-
-```bash
-python app.py
-```
-
-Disponible en `http://localhost:5000`.
-
-## Acceso inicial demo
+## Credenciales demo
 
 - Usuario: `admin`
 - Contraseña: `admin`
 
-Ese usuario demo se crea automáticamente al iniciar (si no existe) y puedes desactivarlo con:
+## Wallpaper personalizado
 
-```bash
-DEMO_ADMIN_ENABLED=0 python app.py
-```
+Coloca archivos en:
 
-## Roles
+- `wallpaper/`
 
-- **Admin**
-  - Puede crear y eliminar usuarios.
-  - Puede editar cualquier usuario (rol, userID, nombre, apellido, foto y contraseña opcional).
-  - Puede registrar nuevas IPs.
-- **Operador**
-  - Puede consultar y modificar IPs existentes.
-  - No puede crear ni eliminar usuarios.
-
-## Personalizar fondo del login
-
-Coloca tu imagen en:
-
-- `static/login-background.jpg`
-
-## Notas
-
-- En Windows se usa `ping -a`.
-- En Linux/macOS se usa `ping -c 1` y DNS inversa.
-- El ping automático corre cada 30 minutos (`PING_INTERVAL_SECONDS = 30 * 60`).
-- Cada intento de ping queda guardado y se conserva por 7 días (`PING_LOG_RETENTION_DAYS`).
+Luego en la app, en **Personalizar fondo**, selecciona el archivo y aplica.
 
 
-- No hace falta compilar HTML manualmente: `index` se genera desde el backend al entrar a `/`.
-- Si visitas `/ping-now` en el navegador, ahora redirige automáticamente al inicio para evitar el 404.
+## ¿Dónde se guardan los datos?
+
+- Se guardan en `data/ips.db` (SQLite).
+- Sí, la carpeta `data/` se **autocrea** en el arranque de la app.
