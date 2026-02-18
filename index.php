@@ -602,8 +602,8 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
             <details class="settings-menu">
                 <summary class="btn">Mantenimiento</summary>
                 <div class="settings-panel menu-panel">
-                    <details class="menu-subgroup">
-                        <summary>Personalización</summary>
+                    <div class="menu-item">
+                        <div class="menu-item-title">Personalización</div>
                         <div class="menu-subcontent">
                             <form method="post" class="form-grid compact">
                                 <input type="hidden" name="action" value="set_wallpaper" />
@@ -619,20 +619,18 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
                                 <button type="submit" class="btn small">Aplicar</button>
                             </form>
                         </div>
-                    </details>
+                    </div>
 
                     <?php if ($user['role'] === ROLE_ADMIN): ?>
-                        <details class="menu-subgroup">
-                            <summary>Usuarios</summary>
-                            <div class="menu-subcontent users-subcontent">
-                                <div class="menu-item-list">
-                                    <a class="menu-link menu-link-block" href="index.php?modal=create_user">Nuevo usuario</a>
-                                    <a class="menu-link menu-link-block" href="index.php?modal=reset_password">Recuperar contraseña</a>
-                                    <a class="menu-link menu-link-block" href="index.php?modal=edit_user">Modificar usuario</a>
-                                    <a class="menu-link menu-link-block" href="index.php?modal=list_users">Listar usuarios</a>
-                                </div>
+                        <div class="menu-item flyout-parent">
+                            <div class="menu-item-title">Usuario</div>
+                            <div class="flyout-menu">
+                                <a class="menu-link menu-link-block" href="index.php?modal=create_user">Nuevo usuario</a>
+                                <a class="menu-link menu-link-block" href="index.php?modal=reset_password">Recuperar contraseña</a>
+                                <a class="menu-link menu-link-block" href="index.php?modal=edit_user">Modificar usuario</a>
+                                <a class="menu-link menu-link-block" href="index.php?modal=list_users">Listar usuarios</a>
                             </div>
-                        </details>
+                        </div>
                     <?php endif; ?>
                 </div>
             </details>

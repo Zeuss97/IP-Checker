@@ -83,16 +83,16 @@ body:not(.login-page)::before {
     -webkit-backdrop-filter: blur(6px);
 }
 
-.menu-subgroup {
+.menu-item {
     border-top: 1px solid var(--border);
+    position: relative;
 }
 
-.menu-subgroup:first-child {
+.menu-item:first-child {
     border-top: 0;
 }
 
-.menu-subgroup > summary {
-    cursor: pointer;
+.menu-item-title {
     padding: 10px 12px;
     font-weight: 700;
     background: color-mix(in srgb, var(--surface) 75%, transparent);
@@ -115,6 +115,30 @@ body:not(.login-page)::before {
 }
 
 .menu-item-list {
+    display: grid;
+    gap: 6px;
+}
+
+.flyout-parent { cursor: default; }
+
+.flyout-menu {
+    position: absolute;
+    top: -1px;
+    left: calc(100% - 1px);
+    min-width: 220px;
+    display: none;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 40;
+    box-shadow: var(--shadow);
+}
+
+.flyout-parent:hover .flyout-menu,
+.flyout-parent:focus-within .flyout-menu {
     display: grid;
     gap: 6px;
 }
@@ -249,4 +273,9 @@ th { text-transform: uppercase; letter-spacing:.05em; font-size: .86rem; color: 
 @media (max-width: 920px) {
     .form-grid.two, .form-grid.three, .form-grid.compact { grid-template-columns: 1fr; }
     .topbar { flex-direction:column; }
+    .flyout-menu {
+        position: static;
+        display: grid;
+        margin: 8px 10px 10px;
+    }
 }
