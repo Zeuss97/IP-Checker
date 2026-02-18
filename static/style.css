@@ -114,6 +114,23 @@ body:not(.login-page)::before {
     margin-bottom: 10px;
 }
 
+.menu-item-list {
+    display: grid;
+    gap: 6px;
+}
+
+.menu-link-block {
+    display: flex;
+    width: 100%;
+    margin-bottom: 0;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--surface) 68%, transparent);
+}
+
+.menu-link-block:hover {
+    background: color-mix(in srgb, var(--primary) 18%, var(--surface));
+}
+
 .users-list {
     border: 1px solid var(--border);
     border-radius: 8px;

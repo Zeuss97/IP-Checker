@@ -440,6 +440,71 @@ if ($action === 'add_user') {
     redirect('index.php');
 }
 
+if ($action === 'update_user') {
+    if ($user['role'] !== ROLE_ADMIN) {
+        flash('Solo admin puede modificar usuarios.', 'error');
+        redirect('index.php');
+    }
+
+    $username = trim((string) ($_POST['username'] ?? ''));
+    $role = trim((string) ($_POST['role'] ?? ROLE_OPERATOR));
+    $firstName = trim((string) ($_POST['first_name'] ?? ''));
+    $lastName = trim((string) ($_POST['last_name'] ?? ''));
+    $newPassword = (string) ($_POST['new_password'] ?? '');
+
+    if ($username === '') {
+        flash('Debe seleccionar un usuario.', 'error');
+        redirect('index.php?modal=edit_user');
+    }
+
+    if (!in_array($role, [ROLE_ADMIN, ROLE_OPERATOR], true)) {
+        $role = ROLE_OPERATOR;
+    }
+
+    $stmt = db()->prepare('UPDATE users SET role = :role, first_name = :first_name, last_name = :last_name WHERE username = :username');
+    $stmt->execute([
+        'role' => $role,
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'username' => $username,
+    ]);
+
+    if ($newPassword !== '') {
+        $passStmt = db()->prepare('UPDATE users SET password_hash = :password_hash WHERE username = :username');
+        $passStmt->execute([
+            'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+            'username' => $username,
+        ]);
+    }
+
+    flash('Usuario modificado correctamente.', 'success');
+    redirect('index.php');
+}
+
+if ($action === 'reset_user_password') {
+    if ($user['role'] !== ROLE_ADMIN) {
+        flash('Solo admin puede recuperar contraseñas.', 'error');
+        redirect('index.php');
+    }
+
+    $username = trim((string) ($_POST['username'] ?? ''));
+    $newPassword = (string) ($_POST['new_password'] ?? '');
+
+    if ($username === '' || $newPassword === '') {
+        flash('Usuario y nueva contraseña son obligatorios.', 'error');
+        redirect('index.php?modal=reset_password');
+    }
+
+    $stmt = db()->prepare('UPDATE users SET password_hash = :password_hash WHERE username = :username');
+    $stmt->execute([
+        'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+        'username' => $username,
+    ]);
+
+    flash('Contraseña actualizada correctamente.', 'success');
+    redirect('index.php');
+}
+
 if ($action === 'ping_now') {
     $ip = trim((string) ($_POST['ip_address'] ?? ''));
     if (validate_ip($ip)) {
@@ -510,7 +575,11 @@ $usersList = [];
 if ($user['role'] === ROLE_ADMIN) {
     $usersList = db()->query('SELECT username, role, first_name, last_name FROM users ORDER BY username')->fetchAll();
 }
-$showCreateUserModal = $user['role'] === ROLE_ADMIN && (($_GET['modal'] ?? '') === 'create_user');
+$modal = trim((string) ($_GET['modal'] ?? ''));
+$showCreateUserModal = $user['role'] === ROLE_ADMIN && $modal === 'create_user';
+$showEditUserModal = $user['role'] === ROLE_ADMIN && $modal === 'edit_user';
+$showResetPasswordModal = $user['role'] === ROLE_ADMIN && $modal === 'reset_password';
+$showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
 ?>
 <!doctype html>
 <html lang="es" data-theme="<?= h($theme) ?>">
@@ -556,19 +625,11 @@ $showCreateUserModal = $user['role'] === ROLE_ADMIN && (($_GET['modal'] ?? '') =
                         <details class="menu-subgroup">
                             <summary>Usuarios</summary>
                             <div class="menu-subcontent users-subcontent">
-                                <a class="menu-link" href="index.php?modal=create_user">Crear usuario</a>
-                                <div class="users-list">
-                                    <strong>Usuarios actuales</strong>
-                                    <?php if (!$usersList): ?>
-                                        <div class="muted">No hay usuarios.</div>
-                                    <?php else: ?>
-                                        <?php foreach ($usersList as $usr): ?>
-                                            <div class="user-row">
-                                                <span><?= h($usr['username']) ?></span>
-                                                <small><?= h($usr['role']) ?></small>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
+                                <div class="menu-item-list">
+                                    <a class="menu-link menu-link-block" href="index.php?modal=create_user">Nuevo usuario</a>
+                                    <a class="menu-link menu-link-block" href="index.php?modal=reset_password">Recuperar contraseña</a>
+                                    <a class="menu-link menu-link-block" href="index.php?modal=edit_user">Modificar usuario</a>
+                                    <a class="menu-link menu-link-block" href="index.php?modal=list_users">Listar usuarios</a>
                                 </div>
                             </div>
                         </details>
@@ -740,6 +801,85 @@ $showCreateUserModal = $user['role'] === ROLE_ADMIN && (($_GET['modal'] ?? '') =
                     </label>
                     <div class="form-end"><button type="submit" class="btn primary small">Guardar usuario</button></div>
                 </form>
+            </section>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($showResetPasswordModal): ?>
+        <div class="modal-backdrop">
+            <section class="card modal-card create-user-modal">
+                <h2>Recuperar contraseña</h2>
+                <a class="btn small ghost" href="index.php">Cerrar</a>
+                <form method="post" class="form-grid two">
+                    <input type="hidden" name="action" value="reset_user_password" />
+                    <label>Usuario
+                        <select name="username" required>
+                            <option value="">Seleccione...</option>
+                            <?php foreach ($usersList as $usr): ?>
+                                <option value="<?= h($usr['username']) ?>"><?= h($usr['username']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>Nueva contraseña<input type="password" name="new_password" required></label>
+                    <div class="form-end"><button type="submit" class="btn primary small">Actualizar contraseña</button></div>
+                </form>
+            </section>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($showEditUserModal): ?>
+        <div class="modal-backdrop">
+            <section class="card modal-card create-user-modal">
+                <h2>Modificar usuario</h2>
+                <a class="btn small ghost" href="index.php">Cerrar</a>
+                <form method="post" class="form-grid two">
+                    <input type="hidden" name="action" value="update_user" />
+                    <label>Usuario
+                        <select name="username" required>
+                            <option value="">Seleccione...</option>
+                            <?php foreach ($usersList as $usr): ?>
+                                <option value="<?= h($usr['username']) ?>"><?= h($usr['username']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>Rol
+                        <select name="role">
+                            <option value="<?= ROLE_OPERATOR ?>">Operador</option>
+                            <option value="<?= ROLE_ADMIN ?>">Admin</option>
+                        </select>
+                    </label>
+                    <label>Nombre<input type="text" name="first_name"></label>
+                    <label>Apellido<input type="text" name="last_name"></label>
+                    <label>Nueva contraseña (opcional)<input type="password" name="new_password"></label>
+                    <div class="form-end"><button type="submit" class="btn primary small">Guardar cambios</button></div>
+                </form>
+            </section>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($showListUsersModal): ?>
+        <div class="modal-backdrop">
+            <section class="card modal-card create-user-modal">
+                <h2>Usuarios actuales</h2>
+                <a class="btn small ghost" href="index.php">Cerrar</a>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th></tr></thead>
+                        <tbody>
+                        <?php if (!$usersList): ?>
+                            <tr><td colspan="3">No hay usuarios.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($usersList as $usr): ?>
+                                <tr>
+                                    <td><?= h($usr['username']) ?></td>
+                                    <td><?= h(trim(($usr['first_name'] ?? '') . ' ' . ($usr['last_name'] ?? '')) ?: '-') ?></td>
+                                    <td><?= h($usr['role']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </div>
     <?php endif; ?>
