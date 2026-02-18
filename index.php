@@ -201,6 +201,17 @@ function validate_ip(string $ip): bool
     return filter_var($ip, FILTER_VALIDATE_IP) !== false;
 }
 
+function ip_sort_value(string $ip): int
+{
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+        $long = ip2long($ip);
+        if ($long !== false) {
+            return (int) sprintf('%u', $long);
+        }
+    }
+    return PHP_INT_MAX;
+}
+
 function normalize_segment_filter(string $input): ?string
 {
     $raw = trim($input);
@@ -724,7 +735,8 @@ if ($action === 'ping_now') {
 }
 
 if ($action === 'ping_all') {
-    $rows = db()->query('SELECT ip_address FROM ip_registry ORDER BY ip_address')->fetchAll();
+    $rows = db()->query('SELECT ip_address FROM ip_registry')->fetchAll();
+    usort($rows, static fn(array $a, array $b): int => ip_sort_value($a['ip_address']) <=> ip_sort_value($b['ip_address']));
     foreach ($rows as $row) {
         run_ping_for_ip($row['ip_address']);
     }
@@ -776,6 +788,7 @@ $sql .= ' ORDER BY ip_address';
 $stmt = db()->prepare($sql);
 $stmt->execute($params);
 $rows = $stmt->fetchAll();
+usort($rows, static fn(array $a, array $b): int => ip_sort_value($a['ip_address']) <=> ip_sort_value($b['ip_address']));
 
 foreach ($rows as &$row) {
     $row['segment'] = compute_segment($row['ip_address']);
