@@ -284,6 +284,9 @@ if ($action === 'logout') {
 
 if ($user === null) {
     $flash = flash();
+    $wallpaper = trim((string) ($_SESSION['wallpaper'] ?? ''));
+    $allowedWallpapers = list_wallpapers();
+    $loginWallpaper = in_array($wallpaper, $allowedWallpapers, true) ? $wallpaper : '';
     ?>
     <!doctype html>
     <html lang="es">
@@ -292,6 +295,11 @@ if ($user === null) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>IP Checker · Login</title>
         <link rel="stylesheet" href="static/style.css" />
+        <?php if ($loginWallpaper !== ''): ?>
+            <style>
+                body::before { background-image: url('<?= h($loginWallpaper) ?>'); }
+            </style>
+        <?php endif; ?>
     </head>
     <body class="login-page">
     <main class="login-card">
@@ -377,7 +385,46 @@ if ($action === 'save_ip') {
         'ip_address' => $ip,
     ]);
     flash('Datos actualizados.', 'success');
-    redirect('index.php?action=detail&ip=' . urlencode($ip));
+    redirect('index.php');
+}
+
+if ($action === 'add_user') {
+    if ($user['role'] !== ROLE_ADMIN) {
+        flash('Solo admin puede crear usuarios.', 'error');
+        redirect('index.php');
+    }
+
+    $username = trim((string) ($_POST['username'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
+    $role = trim((string) ($_POST['role'] ?? ROLE_OPERATOR));
+    $firstName = trim((string) ($_POST['first_name'] ?? ''));
+    $lastName = trim((string) ($_POST['last_name'] ?? ''));
+
+    if ($username === '' || $password === '') {
+        flash('Usuario y contraseña son obligatorios.', 'error');
+        redirect('index.php');
+    }
+
+    if (!in_array($role, [ROLE_ADMIN, ROLE_OPERATOR], true)) {
+        $role = ROLE_OPERATOR;
+    }
+
+    try {
+        $stmt = db()->prepare('INSERT INTO users (username, password_hash, role, first_name, last_name, created_at)
+            VALUES (:username, :password_hash, :role, :first_name, :last_name, :created_at)');
+        $stmt->execute([
+            'username' => $username,
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'role' => $role,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'created_at' => now_iso(),
+        ]);
+        flash('Usuario creado correctamente.', 'success');
+    } catch (PDOException) {
+        flash('No se pudo crear el usuario (usuario ya existe).', 'error');
+    }
+    redirect('index.php');
 }
 
 if ($action === 'ping_now') {
@@ -454,11 +501,6 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Registro y monitoreo de IPs</title>
     <link rel="stylesheet" href="static/style.css" />
-    <?php if ($selectedWallpaper !== ''): ?>
-        <style>
-            body::before { background-image: url('<?= h($selectedWallpaper) ?>'); }
-        </style>
-    <?php endif; ?>
 </head>
 <body>
 <main class="container">
@@ -470,6 +512,43 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
         <div class="top-actions">
             <span class="pill">Perfil (<?= h($displayName) ?>)</span>
             <form method="post"><input type="hidden" name="action" value="toggle_theme"><button class="btn">Modo <?= $theme === 'light' ? 'nocturno' : 'claro' ?></button></form>
+            <details class="settings-menu">
+                <summary class="btn">Menú</summary>
+                <div class="settings-panel card">
+                    <h3>Personalizar fondo de login</h3>
+                    <form method="post" class="form-grid compact">
+                        <input type="hidden" name="action" value="set_wallpaper" />
+                        <label>
+                            Wallpaper (carpeta <code>wallpaper/</code>)
+                            <select name="wallpaper">
+                                <option value="">Sin imagen</option>
+                                <?php foreach ($wallpapers as $wall): ?>
+                                    <option value="<?= h($wall) ?>" <?= $selectedWallpaper === $wall ? 'selected' : '' ?>><?= h(basename($wall)) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <button type="submit" class="btn">Aplicar fondo</button>
+                    </form>
+
+                    <?php if ($user['role'] === ROLE_ADMIN): ?>
+                    <h3>Crear usuario</h3>
+                    <form method="post" class="form-grid two">
+                        <input type="hidden" name="action" value="add_user" />
+                        <label>Usuario<input type="text" name="username" required></label>
+                        <label>Contraseña<input type="password" name="password" required></label>
+                        <label>Nombre<input type="text" name="first_name"></label>
+                        <label>Apellido<input type="text" name="last_name"></label>
+                        <label>Rol
+                            <select name="role">
+                                <option value="<?= ROLE_OPERATOR ?>">Operador</option>
+                                <option value="<?= ROLE_ADMIN ?>">Admin</option>
+                            </select>
+                        </label>
+                        <div class="form-end"><button type="submit" class="btn primary small">Guardar usuario</button></div>
+                    </form>
+                    <?php endif; ?>
+                </div>
+            </details>
             <form method="post"><input type="hidden" name="action" value="logout"><button class="btn primary">Cerrar sesión</button></form>
         </div>
     </header>
@@ -477,23 +556,6 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
     <?php if ($flash): ?>
         <div class="flash <?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
     <?php endif; ?>
-
-    <section class="card">
-        <h2>Personalizar fondo</h2>
-        <form method="post" class="form-grid compact">
-            <input type="hidden" name="action" value="set_wallpaper" />
-            <label>
-                Wallpaper (carpeta <code>wallpaper/</code>)
-                <select name="wallpaper">
-                    <option value="">Sin imagen</option>
-                    <?php foreach ($wallpapers as $wall): ?>
-                        <option value="<?= h($wall) ?>" <?= $selectedWallpaper === $wall ? 'selected' : '' ?>><?= h(basename($wall)) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <button type="submit" class="btn">Aplicar fondo</button>
-        </form>
-    </section>
 
     <?php if ($user['role'] === ROLE_ADMIN): ?>
     <section class="card">
@@ -508,9 +570,9 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
     <?php endif; ?>
 
     <section class="card">
-        <h2>Filtrar por segmento /24</h2>
+        <h2>Filtrar por segmento</h2>
         <form method="get" class="form-grid three">
-            <label>CIDR o 56/24<input type="text" name="segment" value="<?= h($segmentFilterInput) ?>"></label>
+            <label>CIDR<input type="text" name="segment" value="<?= h($segmentFilterInput) ?>"></label>
             <div class="form-end">
                 <button type="submit" class="btn small">Aplicar</button>
                 <a class="btn ghost small" href="index.php">Limpiar</a>
@@ -574,9 +636,10 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
     </section>
 
     <?php if ($detail): ?>
-        <section class="card">
+        <div class="modal-backdrop">
+        <section class="card modal-card">
             <h2>Detalle de IP - <?= h($detail['ip_address']) ?></h2>
-            <a class="btn small ghost" href="index.php">Volver</a>
+            <a class="btn small ghost" href="index.php">Cerrar</a>
             <form method="post" class="form-grid two">
                 <input type="hidden" name="action" value="save_ip" />
                 <input type="hidden" name="ip_address" value="<?= h($detail['ip_address']) ?>" />
@@ -608,7 +671,7 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
             </table>
         </section>
 
-        <section class="card">
+        <section class="card modal-card">
             <h2>Historial de ping (últimos 7 días)</h2>
             <table>
                 <thead><tr><th>Fecha</th><th>Estado</th><th>Hostname</th></tr></thead>
@@ -627,6 +690,7 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
                 </tbody>
             </table>
         </section>
+        </div>
     <?php endif; ?>
 </main>
 </body>

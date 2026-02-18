@@ -1,6 +1,7 @@
 :root {
     --bg: #e9edf3;
-    --card: rgba(255, 255, 255, 0.82);
+    --card: rgba(255, 255, 255, 0.9);
+    --surface: rgba(255, 255, 255, 0.72);
     --text: #1f2937;
     --muted: #5b677e;
     --border: #c9d3e3;
@@ -13,7 +14,8 @@
 
 html[data-theme="dark"] {
     --bg: #0f172a;
-    --card: rgba(30, 41, 59, 0.86);
+    --card: rgba(15, 23, 42, 0.9);
+    --surface: rgba(30, 41, 59, 0.76);
     --text: #e2e8f0;
     --muted: #94a3b8;
     --border: #334155;
@@ -40,8 +42,12 @@ body::before {
     inset: 0;
     background-size: cover;
     background-position: center;
-    opacity: .16;
+    opacity: .12;
     z-index: -1;
+}
+
+body:not(.login-page)::before {
+    background-image: none !important;
 }
 
 .container {
@@ -56,9 +62,23 @@ body::before {
 .top-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .pill { border:1px solid var(--border); background:var(--card); padding:10px 14px; border-radius:12px; font-weight:600; }
 
+.settings-menu { position: relative; }
+.settings-menu summary { list-style: none; }
+.settings-menu summary::-webkit-details-marker { display: none; }
+.settings-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: min(620px, 92vw);
+    margin-top: 0;
+    z-index: 25;
+}
+.settings-panel h3 { margin: 0 0 10px; }
+.settings-panel h3 + form { margin-bottom: 14px; }
+
 .card {
     margin-top: 16px;
-    background: var(--card);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 16px;
@@ -84,12 +104,12 @@ input, select, textarea {
     border-radius:10px;
     padding:10px 12px;
     font-size:1rem;
-    background: rgba(255,255,255,.65);
+    background: rgba(255,255,255,.82);
     color: var(--text);
 }
 html[data-theme="dark"] input,
 html[data-theme="dark"] select,
-html[data-theme="dark"] textarea { background: rgba(15, 23, 42, 0.6); }
+html[data-theme="dark"] textarea { background: rgba(15, 23, 42, 0.78); }
 
 .btn {
     border:1px solid var(--border);
@@ -125,11 +145,27 @@ th { text-transform: uppercase; letter-spacing:.05em; font-size: .86rem; color: 
 .login-page { display:flex; justify-content:center; align-items:center; padding:20px; }
 .login-card {
     width:min(420px, 100%);
-    background: var(--card);
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
     border:1px solid var(--border);
     border-radius:14px;
     padding:20px;
     box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(2, 6, 23, 0.55);
+    padding: 22px 14px;
+    overflow: auto;
+}
+
+.modal-card {
+    max-width: 1080px;
+    margin: 0 auto 14px;
 }
 
 @media (max-width: 920px) {
