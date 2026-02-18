@@ -77,6 +77,7 @@ function init_db(): void
         location TEXT,
         notes TEXT,
         last_ping_at TEXT,
+        last_seen_online_at TEXT,
         last_status TEXT,
         last_output TEXT,
         last_uptime TEXT,
@@ -91,6 +92,9 @@ function init_db(): void
     }
     if (!in_array('last_uptime', $columnNames, true)) {
         $pdo->exec('ALTER TABLE ip_registry ADD COLUMN last_uptime TEXT');
+    }
+    if (!in_array('last_seen_online_at', $columnNames, true)) {
+        $pdo->exec('ALTER TABLE ip_registry ADD COLUMN last_seen_online_at TEXT');
     }
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS ping_logs (
@@ -277,9 +281,11 @@ function run_ping_for_ip(string $ip): void
     $result = ping_ip($ip);
     $uptime = probe_uptime($ip);
     $timestamp = now_iso();
+    $lastSeenOnlineAt = $result['status'] === 'OK' ? $timestamp : null;
 
     $update = db()->prepare('UPDATE ip_registry
         SET last_ping_at = :last_ping_at, last_status = :last_status, last_output = :last_output,
+            last_seen_online_at = COALESCE(:last_seen_online_at, last_seen_online_at),
             last_uptime = COALESCE(:last_uptime, last_uptime),
             host_name = COALESCE(NULLIF(host_name, ""), :host_name)
         WHERE ip_address = :ip_address');
@@ -287,6 +293,7 @@ function run_ping_for_ip(string $ip): void
         'last_ping_at' => $timestamp,
         'last_status' => $result['status'],
         'last_output' => $result['output'],
+        'last_seen_online_at' => $lastSeenOnlineAt,
         'last_uptime' => $uptime,
         'host_name' => $result['hostname'],
         'ip_address' => $ip,
@@ -913,6 +920,7 @@ if (!in_array($view, ['dashboard', 'ips'], true)) {
                                 Ubicación: <?= h($row['location'] ?: '-') ?><br>
                                 Notas: <?= h($row['notes'] ?: '-') ?><br>
                                 Último uptime: <?= h($row['last_uptime'] ?: '-') ?><br>
+                                Último visto online: <?= h($row['last_seen_online_at'] ? format_display_datetime($row['last_seen_online_at']) : '-') ?><br>
                                 Registrado por: <?= h($row['created_by'] ?: '-') ?>
                             </td>
                                 <td>
@@ -968,6 +976,7 @@ if (!in_array($view, ['dashboard', 'ips'], true)) {
                     <tr><th>Notas</th><td><?= h($detail['notes'] ?: '-') ?></td></tr>
                     <tr><th>Último estado</th><td><?= h($detail['last_status'] ?: '-') ?></td></tr>
                     <tr><th>Último ping</th><td><?= h($detail['last_ping_at'] ? format_display_datetime($detail['last_ping_at']) : '-') ?></td></tr>
+                    <tr><th>Último visto online</th><td><?= h($detail['last_seen_online_at'] ? format_display_datetime($detail['last_seen_online_at']) : '-') ?></td></tr>
                     <tr><th>Último uptime</th><td><?= h($detail['last_uptime'] ?: '-') ?></td></tr>
                     <tr><th>Registrado por</th><td><?= h($detail['created_by'] ?: '-') ?></td></tr>
                 </table>
