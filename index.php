@@ -525,8 +525,8 @@ if ($action === 'add_ip') {
 }
 
 if ($action === 'scan_segment') {
-    if (!in_array($user['role'], [ROLE_ADMIN, ROLE_OPERATOR], true)) {
-        flash('No tienes permisos para escanear segmentos.', 'error');
+    if ($user['role'] !== ROLE_ADMIN) {
+        flash('Solo admin puede escanear segmentos.', 'error');
         redirect('index.php?view=ips');
     }
 
@@ -1020,6 +1020,7 @@ $currentUrl = 'index.php' . ($_GET ? ('?' . http_build_query($_GET)) : '');
             </form>
         </details>
 
+        <?php if ($user['role'] === ROLE_ADMIN): ?>
         <details class="card collapsible-card" open>
             <summary><h2>Escanear segmento (/24)</h2></summary>
             <form method="post" class="form-grid three">
@@ -1031,6 +1032,7 @@ $currentUrl = 'index.php' . ($_GET ? ('?' . http_build_query($_GET)) : '');
             </form>
             <div class="muted">Escanea hosts 1..254 del segmento y registra/actualiza las IPs que respondan ping.</div>
         </details>
+        <?php endif; ?>
         <?php endif; ?>
 
         <details class="card collapsible-card" open>
