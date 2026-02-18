@@ -58,6 +58,11 @@ function format_display_datetime(?string $value): string
 function init_db(): void
 {
     $pdo = db();
+    $pdo->exec('CREATE TABLE IF NOT EXISTS app_settings (
+        setting_key TEXT PRIMARY KEY,
+        setting_value TEXT
+    )');
+
     $pdo->exec('CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
@@ -120,6 +125,25 @@ function init_db(): void
             'created_at' => now_iso(),
         ]);
     }
+}
+
+function get_app_setting(string $key, string $default = ''): string
+{
+    $stmt = db()->prepare('SELECT setting_value FROM app_settings WHERE setting_key = :setting_key');
+    $stmt->execute(['setting_key' => $key]);
+    $value = $stmt->fetchColumn();
+    return $value === false ? $default : (string) $value;
+}
+
+function set_app_setting(string $key, string $value): void
+{
+    $stmt = db()->prepare('INSERT INTO app_settings (setting_key, setting_value)
+        VALUES (:setting_key, :setting_value)
+        ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value');
+    $stmt->execute([
+        'setting_key' => $key,
+        'setting_value' => $value,
+    ]);
 }
 
 function current_user(): ?array
@@ -358,7 +382,7 @@ if ($action === 'logout') {
 
 if ($user === null) {
     $flash = flash();
-    $wallpaper = trim((string) ($_SESSION['wallpaper'] ?? ''));
+    $wallpaper = trim(get_app_setting('login_wallpaper', ''));
     $allowedWallpapers = list_wallpapers();
     $loginWallpaper = in_array($wallpaper, $allowedWallpapers, true) ? $wallpaper : '';
     ?>
@@ -406,7 +430,7 @@ if ($action === 'set_wallpaper') {
     $choice = trim((string) ($_POST['wallpaper'] ?? ''));
     $allowed = list_wallpapers();
     if ($choice === '' || in_array($choice, $allowed, true)) {
-        $_SESSION['wallpaper'] = $choice;
+        set_app_setting('login_wallpaper', $choice);
     }
     redirect('index.php');
 }
@@ -698,7 +722,7 @@ if (($action === 'detail' || isset($_GET['ip'])) && validate_ip($detailIp)) {
 
 $flash = flash();
 $wallpapers = list_wallpapers();
-$selectedWallpaper = $_SESSION['wallpaper'] ?? '';
+$selectedWallpaper = get_app_setting('login_wallpaper', '');
 $theme = $_SESSION['theme'] ?? 'light';
 $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?: $user['username'];
 $usersList = [];
@@ -924,7 +948,8 @@ if (!in_array($view, ['dashboard', 'ips'], true)) {
                                 Registrado por: <?= h($row['created_by'] ?: '-') ?>
                             </td>
                                 <td>
-                                    <?= h($row['last_status'] ?: 'SIN DATOS') ?>
+                                    <?php $statusLabel = strtoupper((string) ($row['last_status'] ?: 'SIN DATOS')); ?>
+                                    <span class="status-pill <?= $statusLabel === 'OK' ? 'ok' : (($statusLabel === 'ERROR') ? 'error' : 'unknown') ?>"><?= h($statusLabel) ?></span>
                                     <div class="muted"><?= h($row['last_ping_at'] ? format_display_datetime($row['last_ping_at']) : 'Nunca') ?></div>
                                 </td>
                                 <td class="actions-col">
