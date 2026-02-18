@@ -622,15 +622,15 @@ $showListUsersModal = $user['role'] === ROLE_ADMIN && $modal === 'list_users';
                     </div>
 
                     <?php if ($user['role'] === ROLE_ADMIN): ?>
-                        <div class="menu-item flyout-parent">
-                            <div class="menu-item-title">Usuario</div>
+                        <details class="menu-item flyout-parent">
+                            <summary class="menu-item-title">Usuario</summary>
                             <div class="flyout-menu">
                                 <a class="menu-link menu-link-block" href="index.php?modal=create_user">Nuevo usuario</a>
                                 <a class="menu-link menu-link-block" href="index.php?modal=reset_password">Recuperar contraseña</a>
                                 <a class="menu-link menu-link-block" href="index.php?modal=edit_user">Modificar usuario</a>
                                 <a class="menu-link menu-link-block" href="index.php?modal=list_users">Listar usuarios</a>
                             </div>
-                        </div>
+                        </details>
                     <?php endif; ?>
                 </div>
             </details>

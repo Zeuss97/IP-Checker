@@ -78,7 +78,7 @@ body:not(.login-page)::before {
     background: color-mix(in srgb, var(--surface) 90%, transparent);
     border: 1px solid var(--border);
     border-radius: 10px;
-    overflow: hidden;
+    overflow: visible;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
 }
@@ -97,6 +97,28 @@ body:not(.login-page)::before {
     font-weight: 700;
     background: color-mix(in srgb, var(--surface) 75%, transparent);
 }
+.menu-item-title {
+    list-style: none;
+}
+
+.flyout-parent > summary {
+    cursor: pointer;
+}
+
+.flyout-parent > summary::-webkit-details-marker {
+    display: none;
+}
+
+.flyout-parent > summary::after {
+    content: "▸";
+    float: right;
+    opacity: .75;
+}
+
+.flyout-parent[open] > summary::after {
+    content: "▾";
+}
+
 
 .menu-subcontent {
     padding: 12px;
@@ -137,6 +159,7 @@ body:not(.login-page)::before {
     box-shadow: var(--shadow);
 }
 
+.flyout-parent[open] .flyout-menu,
 .flyout-parent:hover .flyout-menu,
 .flyout-parent:focus-within .flyout-menu {
     display: grid;
@@ -275,7 +298,9 @@ th { text-transform: uppercase; letter-spacing:.05em; font-size: .86rem; color: 
     .topbar { flex-direction:column; }
     .flyout-menu {
         position: static;
-        display: grid;
         margin: 8px 10px 10px;
+    }
+    .flyout-parent[open] .flyout-menu {
+        display: grid;
     }
 }
