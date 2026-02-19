@@ -290,6 +290,34 @@ body:not(.login-page)::before {
 .full { grid-column: 1 / -1; }
 .form-end { display:flex; align-items:end; gap:8px; }
 
+.libres-control {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.libres-control .btn {
+    border: 0;
+    border-right: 1px solid var(--border);
+    border-radius: 0;
+}
+
+.libres-control .btn.small {
+    padding-inline: 14px;
+}
+
+.libres-segment-select {
+    border: 0;
+    border-radius: 0;
+    min-width: 110px;
+    width: auto;
+    padding: 7px 10px;
+    font-size: .92rem;
+}
+
 label { display:flex; flex-direction:column; gap:6px; font-weight:600; color:var(--muted); }
 input, select, textarea {
     width: 100%;

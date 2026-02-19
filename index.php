@@ -1453,15 +1453,15 @@ $currentUrl = 'index.php' . ($_GET ? ('?' . http_build_query($_GET)) : '');
                 </label>
                 <div class="form-end">
                     <button type="submit" class="btn small">Aplicar</button>
-                    <label>Segmento libres
-                        <select name="free_segment">
-                            <option value="">Segmento libres</option>
+                    <div class="libres-control">
+                        <button type="submit" name="only_free" value="1" class="btn small <?= $onlyFreeInput ? 'primary' : '' ?>">Libres</button>
+                        <select name="free_segment" aria-label="Segmento para filtro de libres" class="libres-segment-select">
+                            <option value="">Todos</option>
                             <?php foreach ($freeSegmentOptions as $freeSegOption): ?>
                                 <option value="<?= h($freeSegOption) ?>" <?= $freeSegmentInput === $freeSegOption ? 'selected' : '' ?>><?= h($freeSegOption) ?></option>
                             <?php endforeach; ?>
                         </select>
-                    </label>
-                    <button type="submit" name="only_free" value="1" class="btn small <?= $onlyFreeInput ? 'primary' : '' ?>">Libres</button>
+                    </div>
                     <a class="btn ghost small" href="index.php?view=ips">Limpiar</a>
                 </div>
             </form>
