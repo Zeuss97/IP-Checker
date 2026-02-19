@@ -351,7 +351,15 @@ function probe_uptime(string $ip): ?string
 function ping_ip(string $ip): array
 {
     $isWindows = strtoupper(substr(PHP_OS_FAMILY, 0, 3)) === 'WIN';
-    $command = $isWindows ? sprintf('ping -a -n 1 %s', escapeshellarg($ip)) : sprintf('ping -c 1 %s', escapeshellarg($ip));
+    if ($isWindows) {
+        $command = sprintf('ping -a -n 1 -w 1000 %s', escapeshellarg($ip));
+    } else {
+        $pingCmd = sprintf('ping -n -c 1 -W 1 -w 2 %s', escapeshellarg($ip));
+        $timeoutBin = trim((string) @shell_exec('command -v timeout 2>/dev/null'));
+        $command = $timeoutBin !== ''
+            ? sprintf('%s 2 %s', escapeshellcmd($timeoutBin), $pingCmd)
+            : $pingCmd;
+    }
 
     $outputLines = [];
     $exitCode = 1;
@@ -1009,14 +1017,20 @@ foreach ($rows as &$row) {
 }
 unset($row);
 
-$allIpRows = db()->query('SELECT ip_address FROM ip_registry ORDER BY ip_address')->fetchAll();
+$allIpRows = db()->query('SELECT ip_address, alias, host_name FROM ip_registry ORDER BY ip_address')->fetchAll();
 $segmentStatsMap = [];
 foreach ($allIpRows as $ipRow) {
     $segment = compute_segment($ipRow['ip_address']);
     if (!isset($segmentStatsMap[$segment])) {
         $segmentStatsMap[$segment] = ['segment' => $segment, 'used' => 0, 'free' => 254];
     }
-    $segmentStatsMap[$segment]['used']++;
+
+    $alias = strtoupper(trim((string) ($ipRow['alias'] ?? '')));
+    $hostname = trim((string) ($ipRow['host_name'] ?? ''));
+    $isFreePlaceholder = $alias === 'LIBRE' && $hostname === '';
+    if (!$isFreePlaceholder) {
+        $segmentStatsMap[$segment]['used']++;
+    }
 }
 foreach ($segmentStatsMap as &$segmentData) {
     $segmentData['free'] = max(0, 254 - $segmentData['used']);
