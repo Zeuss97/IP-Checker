@@ -1123,6 +1123,7 @@ $segmentFilter = normalize_segment_filter($segmentFilterInput);
 $ipFilterInput = trim((string) ($_GET['ip_filter'] ?? ''));
 $nameFilterInput = trim((string) ($_GET['name_filter'] ?? ''));
 $locationFilterInput = trim((string) ($_GET['location_filter'] ?? ''));
+$onlyFreeInput = (string) ($_GET['only_free'] ?? '') === '1';
 
 $rows = [];
 if ($view === 'ips') {
@@ -1155,6 +1156,10 @@ if ($view === 'ips') {
     if ($locationFilterInput !== '') {
         $conditions[] = 'location LIKE :location_filter';
         $params['location_filter'] = '%' . $locationFilterInput . '%';
+    }
+
+    if ($onlyFreeInput) {
+        $conditions[] = 'UPPER(TRIM(COALESCE(alias, ""))) = "LIBRE" AND TRIM(COALESCE(host_name, "")) = ""';
     }
 
     if ($conditions) {
@@ -1427,6 +1432,7 @@ $currentUrl = 'index.php' . ($_GET ? ('?' . http_build_query($_GET)) : '');
                 </label>
                 <div class="form-end">
                     <button type="submit" class="btn small">Aplicar</button>
+                    <button type="submit" name="only_free" value="1" class="btn small <?= $onlyFreeInput ? 'primary' : '' ?>">Libres</button>
                     <a class="btn ghost small" href="index.php?view=ips">Limpiar</a>
                 </div>
             </form>
