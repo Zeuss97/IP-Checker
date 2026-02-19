@@ -306,6 +306,11 @@ function compute_segment(string $ip): string
     return '-';
 }
 
+function is_free_alias(?string $alias): bool
+{
+    return strtoupper(trim((string) $alias)) === 'LIBRE';
+}
+
 function parse_hostname_from_output(string $output): ?string
 {
     $lines = preg_split('/\R/', $output) ?: [];
@@ -1052,14 +1057,16 @@ $dashboardData = ['segment' => $dashboardSegment, 'used' => 0, 'free' => 254];
 $dashboardUsedPct = 0;
 $dashboardSegmentOctet = '';
 if ($view === 'dashboard') {
-    $allIpRows = db()->query('SELECT ip_address FROM ip_registry ORDER BY ip_address')->fetchAll();
+    $allIpRows = db()->query('SELECT ip_address, alias FROM ip_registry ORDER BY ip_address')->fetchAll();
     $segmentStatsMap = [];
     foreach ($allIpRows as $ipRow) {
         $segment = compute_segment($ipRow['ip_address']);
         if (!isset($segmentStatsMap[$segment])) {
             $segmentStatsMap[$segment] = ['segment' => $segment, 'used' => 0, 'free' => 254];
         }
-        $segmentStatsMap[$segment]['used']++;
+        if (!is_free_alias($ipRow['alias'] ?? null)) {
+            $segmentStatsMap[$segment]['used']++;
+        }
     }
     foreach ($segmentStatsMap as &$segmentData) {
         $segmentData['free'] = max(0, 254 - $segmentData['used']);
