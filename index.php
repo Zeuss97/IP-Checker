@@ -1126,6 +1126,11 @@ $locationFilterInput = trim((string) ($_GET['location_filter'] ?? ''));
 $onlyFreeInput = (string) ($_GET['only_free'] ?? '') === '1';
 $freeSegmentInput = trim((string) ($_GET['free_segment'] ?? ''));
 $freeSegmentFilter = normalize_segment_filter($freeSegmentInput);
+$pageInput = max(1, (int) ($_GET['page'] ?? 1));
+$perPage = $onlyFreeInput ? 120 : 200;
+$totalRows = 0;
+$totalPages = 1;
+$currentPage = 1;
 $freeSegmentOptions = [];
 foreach (load_dashboard_segment_stats() as $seg) {
     $segmentValue = (string) ($seg['segment'] ?? '');
@@ -1136,7 +1141,7 @@ foreach (load_dashboard_segment_stats() as $seg) {
 
 $rows = [];
 if ($view === 'ips') {
-    $sql = 'SELECT * FROM ip_registry';
+    $baseSql = 'FROM ip_registry';
     $params = [];
     $conditions = [];
     if ($segmentFilter !== null) {
@@ -1184,11 +1189,24 @@ if ($view === 'ips') {
     }
 
     if ($conditions) {
-        $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        $baseSql .= ' WHERE ' . implode(' AND ', $conditions);
     }
-    $sql .= ' ORDER BY ip_address';
+
+    $countStmt = db()->prepare('SELECT COUNT(*) ' . $baseSql);
+    $countStmt->execute($params);
+    $totalRows = (int) $countStmt->fetchColumn();
+    $totalPages = max(1, (int) ceil($totalRows / $perPage));
+    $currentPage = min($pageInput, $totalPages);
+    $offset = ($currentPage - 1) * $perPage;
+
+    $sql = 'SELECT * ' . $baseSql . ' ORDER BY ip_address LIMIT :limit OFFSET :offset';
     $stmt = db()->prepare($sql);
-    $stmt->execute($params);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    }
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $rows = $stmt->fetchAll();
     usort($rows, static fn(array $a, array $b): int => ip_sort_value($a['ip_address']) <=> ip_sort_value($b['ip_address']));
 
@@ -1197,6 +1215,12 @@ if ($view === 'ips') {
     }
     unset($row);
 }
+
+$ipsQuery = $_GET;
+$ipsQuery['view'] = 'ips';
+unset($ipsQuery['page']);
+$prevPageUrl = 'index.php?' . http_build_query($ipsQuery + ['page' => max(1, $currentPage - 1)]);
+$nextPageUrl = 'index.php?' . http_build_query($ipsQuery + ['page' => min($totalPages, $currentPage + 1)]);
 
 $segmentStats = [];
 $dashboardSegment = trim((string) ($_GET['dashboard_segment'] ?? ''));
@@ -1472,6 +1496,10 @@ $currentUrl = 'index.php' . ($_GET ? ('?' . http_build_query($_GET)) : '');
                 <h2>IPs registradas</h2>
                 <form method="post"><input type="hidden" name="action" value="ping_all" /><button class="btn primary small">Ejecutar ping manual</button></form>
             </div>
+            <div class="muted">
+                Mostrando <?= h((string) count($rows)) ?> de <?= h((string) $totalRows) ?> resultados.
+                Página <?= h((string) $currentPage) ?> de <?= h((string) $totalPages) ?>.
+            </div>
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -1523,6 +1551,21 @@ $currentUrl = 'index.php' . ($_GET ? ('?' . http_build_query($_GET)) : '');
                     </tbody>
                 </table>
             </div>
+            <?php if ($totalPages > 1): ?>
+                <div class="table-pagination">
+                    <?php if ($currentPage > 1): ?>
+                        <a class="btn small" href="<?= h($prevPageUrl) ?>">← Anterior</a>
+                    <?php else: ?>
+                        <span class="btn small" aria-disabled="true">← Anterior</span>
+                    <?php endif; ?>
+
+                    <?php if ($currentPage < $totalPages): ?>
+                        <a class="btn small" href="<?= h($nextPageUrl) ?>">Siguiente →</a>
+                    <?php else: ?>
+                        <span class="btn small" aria-disabled="true">Siguiente →</span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </section>
 
         <?php if ($detail): ?>
